@@ -10,24 +10,22 @@ class IncorrectCalendarURL(Exception):
         super().__init__(message)
 
 
+def get_current_date(time=False):
+    # Define CET timezone
+    cet_timezone = pytz.timezone("Europe/Berlin")
 
-class Schedule():
-    def __init__(self, url):
-        current_date = self.get_current_date()
-        calendar = self.url_to_calendar(url)
-        today_events = self.get_today_events(current_date, calendar)
-        self.message = self.get_daily_schedule(current_date, today_events)
-
-
-    def get_current_date(self):
-
-        # Define CET timezone
-        cet_timezone = pytz.timezone("Europe/Berlin")
-
-        # Get current time in CET
+    # Get current time in CET
+    if time:
+        current_cet_date = datetime.now(cet_timezone)
+    else:
         current_cet_date = datetime.now(cet_timezone).date()
 
-        return current_cet_date
+    return current_cet_date
+
+
+class Schedule():
+    def __init__(self):
+        self.current_date = get_current_date()
 
 
     def url_to_calendar(self, url):
@@ -53,7 +51,9 @@ class Schedule():
         return today_events
 
 
-    def get_daily_schedule(self, current_date, events):
+    def get_daily_schedule(self, url):
+        calendar = self.url_to_calendar(url)
+        today_events = self.get_today_events(self.current_date, calendar)
         # Template for the header
         header_template = (
             "📅 Servus!\n"
@@ -70,10 +70,10 @@ class Schedule():
         )
         
         # Start the message with the header
-        message = header_template.format(current_date=current_date)
+        message = header_template.format(current_date=self.current_date)
         
         # Add each event to the message
-        for event in events:
+        for event in today_events:
             # Extract details from ICS event
             summary = event.name  # e.g. "KV Responsible AI / Martina Mara / (510101/2024W)"
             parts = summary.split(" / ")
