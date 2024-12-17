@@ -9,10 +9,10 @@ Check it out in telegram - @JKUClassNotifierBOT
 
 ## Installation and Setup 
 ```bash
-git clone git@github.com:nikitazuevblago/food_expenses_tgbot.git
-cd food_expenses_tgbot
+git clone git@github.com:nikitazuevblago/JKUClassNotifier.git
+cd JKUClassNotifier
 pip install -r requirementst.txt
-python main.py
+python bot.py
 ```
 * Don't forget to create .env file with necessary variables
 
