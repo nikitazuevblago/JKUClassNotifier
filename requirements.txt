@@ -1,3 +1,6 @@
 requests
 ics
 pytz
+aiogram
+python-dotenv
+psycopg2
