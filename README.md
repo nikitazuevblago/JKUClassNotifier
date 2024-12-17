@@ -11,7 +11,7 @@ Check it out in telegram - @JKUClassNotifierBOT
 ```bash
 git clone git@github.com:nikitazuevblago/JKUClassNotifier.git
 cd JKUClassNotifier
-pip install -r requirementst.txt
+pip install -r requirements.txt
 python bot.py
 ```
 * Don't forget to create .env file with necessary variables
