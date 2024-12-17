@@ -73,7 +73,7 @@ async def send_daily_schedule(bot):
     
     while True:
         updated_current_date = get_current_date()
-        
+
         # Check if we have reached a new day
         if updated_current_date > last_mailing_date:
             users = get_all_users_DB()
@@ -81,6 +81,7 @@ async def send_daily_schedule(bot):
                 try:
                     schedule_msg = Schedule().get_daily_schedule(url)
                     await bot.send_message(telegram_id, schedule_msg)
+                    print("Daily mailing completed")
                 except Exception as e:
                     print(f"Failed to send message to {telegram_id}: {e}")
             
@@ -92,6 +93,7 @@ async def send_daily_schedule(bot):
         next_midnight = datetime.combine(updated_current_date + timedelta(days=1), time(0, 0))
         current_time = get_current_date(time=True).replace(tzinfo=None)
         sleep_time = (next_midnight - current_time).total_seconds()
+        print(f"Sleeping {sleep_time/60} minutes")
         await asyncio.sleep(sleep_time)
 
 
