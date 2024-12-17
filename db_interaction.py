@@ -1,9 +1,11 @@
 import psycopg2 as pg2
 import os
+from custom_logging import logger
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def create_tables_DB():
-    # Establish the connection
     connection = pg2.connect(
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
@@ -13,42 +15,51 @@ def create_tables_DB():
     )
 
     try:
-        # Create USERS table
         cursor = connection.cursor()
+
+        # Create bot_logs table
+        cursor.execute("""
+            CREATE TABLE bot_logs (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                level TEXT NOT NULL,
+                message TEXT NOT NULL
+            );
+        """)
+        connection.commit()
+        logger.info("Table bot_logs created successfully.")
+
+        # Create USERS table
+        logger.info("Creating table USERS...")
         cursor.execute("""
             CREATE TABLE USERS (
                 TELEGRAM_ID BIGINT,
                 URL VARCHAR(255)
             );
         """)
-        print(f"Created table USERS")
-        # Commit the changes
+        logger.info("Table USERS created successfully.")
         connection.commit()
 
-        # Create mailing table
+        # Create MAILING_HISTORY table
+        logger.info("Creating table MAILING_HISTORY...")
         cursor.execute("""
             CREATE TABLE MAILING_HISTORY (
                 DATE DATE UNIQUE
             );
         """)
-        print(f"Created table MAILING_HISTORY")
-        # Commit the changes
+        logger.info("Table MAILING_HISTORY created successfully.")
         connection.commit()
 
     except Exception as error:
-        print(f"An error occurred: {error}")
-        connection.rollback()
+        logger.error(f"An error occurred while creating tables: {error}")
+        
 
     finally:
-        # Close the cursor and connection
         cursor.close()
         connection.close()
-
-
+        logger.info("Database connection closed after table creation.")
 
 def drop_tables_DB():
-
-    # Establish the connection
     connection = pg2.connect(
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
@@ -58,36 +69,27 @@ def drop_tables_DB():
     )
 
     try:
-        # Create a cursor object
         cursor = connection.cursor()
-
-        # Retrieve all table names in the current database
-        # We are assuming public schema, modify if a different schema is used
         cursor.execute("""
             SELECT tablename FROM pg_tables WHERE schemaname = 'public'
         """)
         tables = cursor.fetchall()
 
-        # Drop each table
         for table_name, in tables:
             cursor.execute(f"DROP TABLE IF EXISTS {table_name} CASCADE;")
-            print(f"Dropped table {table_name}")
-
-        # Commit the changes
         connection.commit()
 
     except Exception as error:
-        print(f"An error occurred: {error}")
-        connection.rollback()
+        #logger.error(f"An error occurred while dropping tables: {error}")
+        print(f"An error occurred while dropping tables: {error}")
+        
 
     finally:
-        # Close the cursor and connection
         cursor.close()
         connection.close()
 
-
 def add_user_DB(telegram_id, url):
-    # Establish the connection
+    logger.info(f"Adding user {telegram_id} to USERS table...")
     connection = pg2.connect(
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
@@ -95,30 +97,28 @@ def add_user_DB(telegram_id, url):
         port=os.getenv("DB_PORT"),
         database=os.getenv("DB_DATABASE")
     )
+    logger.info("Database connection established for adding user.")
 
     try:
-        # Create a cursor object
         cursor = connection.cursor()
         cursor.execute(f"""
             INSERT INTO USERS (TELEGRAM_ID, URL)
             VALUES ({telegram_id}, '{url}');
         """)
-        print(f"New user added")
-        # Commit the changes
         connection.commit()
+        logger.info(f"User {telegram_id} added successfully.")
 
     except Exception as error:
-        print(f"An error occurred: {error}")
-        connection.rollback()
+        logger.error(f"An error occurred while adding user {telegram_id}: {error}")
+        
 
     finally:
-        # Close the cursor and connection
         cursor.close()
         connection.close()
-
+        logger.info("Database connection closed after adding user.")
 
 def add_mailing_date_DB(date):
-    # Establish the connection
+    logger.info(f"Adding mailing date {date}...")
     connection = pg2.connect(
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
@@ -126,28 +126,27 @@ def add_mailing_date_DB(date):
         port=os.getenv("DB_PORT"),
         database=os.getenv("DB_DATABASE")
     )
+    logger.info("Database connection established for adding mailing date.")
 
     try:
-        # Create a cursor object
         cursor = connection.cursor()
         cursor.execute(f"""
             INSERT INTO MAILING_HISTORY (DATE) VALUES ('{date}');
         """)
-        print(f"New mailing date added")
-        # Commit the changes
         connection.commit()
+        logger.info(f"Mailing date {date} added successfully.")
 
     except Exception as error:
-        print(f"An error occurred: {error}")
-        connection.rollback()
+        logger.error(f"An error occurred while adding mailing date {date}: {error}")
+        
 
     finally:
-        # Close the cursor and connection
         cursor.close()
         connection.close()
-
+        logger.info("Database connection closed after adding mailing date.")
 
 def get_all_users_DB():
+    logger.info("Fetching all users from USERS table...")
     connection = pg2.connect(
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
@@ -155,19 +154,25 @@ def get_all_users_DB():
         port=os.getenv("DB_PORT"),
         database=os.getenv("DB_DATABASE")
     )
+    logger.info("Database connection established for fetching users.")
+
     try:
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM USERS;")
         records = cursor.fetchall()
+        logger.info(f"Fetched {len(records)} users.")
         return records
+
     except Exception as error:
-        print(f"An error occurred: {error}")
+        logger.error(f"An error occurred while fetching users: {error}")
+
     finally:
         cursor.close()
         connection.close()
-
+        logger.info("Database connection closed after fetching users.")
 
 def get_all_mailing_history_DB():
+    logger.info("Fetching mailing history...")
     connection = pg2.connect(
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
@@ -175,13 +180,19 @@ def get_all_mailing_history_DB():
         port=os.getenv("DB_PORT"),
         database=os.getenv("DB_DATABASE")
     )
+    logger.info("Database connection established for fetching mailing history.")
+
     try:
         cursor = connection.cursor()
         cursor.execute("SELECT * FROM MAILING_HISTORY;")
         records = cursor.fetchall()
+        logger.info(f"Fetched {len(records)} mailing history records.")
         return records
+
     except Exception as error:
-        print(f"An error occurred: {error}")
+        logger.error(f"An error occurred while fetching mailing history: {error}")
+
     finally:
         cursor.close()
         connection.close()
+        logger.info("Database connection closed after fetching mailing history.")

@@ -2,6 +2,9 @@ from datetime import datetime
 import pytz
 import requests
 from ics import Calendar
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # Custom exceptions
