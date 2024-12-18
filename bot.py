@@ -64,6 +64,13 @@ async def ask_cal(message: Message) -> None:
     try:
         # Fetch schedule
         schedule_msg = Schedule().get_daily_schedule(url)
+
+        # Check if user already registered 
+        registered_users = [user for user, _ in get_all_users_DB()]
+        if message.from_user.id in registered_users:
+            remove_user_DB(message.from_user.id)
+            logger.info(f"Registered user {message.from_user.id} successfully DELETED from database.")
+
         # Add user to the database
         add_user_DB(message.from_user.id, url)
         logger.info(f"User {message.from_user.id} successfully added to database.")

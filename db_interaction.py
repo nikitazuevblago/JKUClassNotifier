@@ -1,9 +1,8 @@
 import psycopg2 as pg2
+from psycopg2 import errors
 import os
 from custom_logging import logger
 from dotenv import load_dotenv
-
-load_dotenv()
 
 def create_tables_DB():
     connection = pg2.connect(
@@ -33,7 +32,7 @@ def create_tables_DB():
         logger.info("Creating table USERS...")
         cursor.execute("""
             CREATE TABLE USERS (
-                TELEGRAM_ID BIGINT,
+                TELEGRAM_ID BIGINT UNIQUE,
                 URL VARCHAR(255)
             );
         """)
@@ -52,12 +51,15 @@ def create_tables_DB():
 
     except Exception as error:
         logger.error(f"An error occurred while creating tables: {error}")
+        if connection:
+            connection.rollback()
         
 
     finally:
         cursor.close()
         connection.close()
         logger.info("Database connection closed after table creation.")
+
 
 def drop_tables_DB():
     connection = pg2.connect(
@@ -80,8 +82,9 @@ def drop_tables_DB():
         connection.commit()
 
     except Exception as error:
-        #logger.error(f"An error occurred while dropping tables: {error}")
         print(f"An error occurred while dropping tables: {error}")
+        if connection:
+            connection.rollback()
         
 
     finally:
@@ -108,14 +111,53 @@ def add_user_DB(telegram_id, url):
         connection.commit()
         logger.info(f"User {telegram_id} added successfully.")
 
-    except Exception as error:
-        logger.error(f"An error occurred while adding user {telegram_id}: {error}")
-        
+    except Exception as e:
+        # Handle specific errors first
+        if isinstance(e, errors.UniqueViolation):
+            logger.error("UniqueViolation: The user already exists.")
+        else:
+            # Handle all other exceptions
+            logger.error(f"An error occurred: {e}")
+        if connection:
+            connection.rollback()  # Rollback transaction in case of an error
 
     finally:
         cursor.close()
         connection.close()
         logger.info("Database connection closed after adding user.")
+
+
+def remove_user_DB(telegram_id):
+    logger.info(f"Removing user {telegram_id} from USERS table...")
+    connection = pg2.connect(
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+        database=os.getenv("DB_DATABASE")
+    )
+    logger.info("Database connection established for removing user.")
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"""
+            DELETE FROM USERS
+            WHERE TELEGRAM_ID = {telegram_id};
+        """)
+        connection.commit()
+        logger.info(f"User {telegram_id} removed successfully.")
+
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        if connection:
+            connection.rollback()  # Rollback transaction in case of an error
+
+    finally:
+        cursor.close()
+        connection.close()
+        logger.info("Database connection closed after removing user.")
+
+
 
 def add_mailing_date_DB(date):
     logger.info(f"Adding mailing date {date}...")
@@ -138,6 +180,8 @@ def add_mailing_date_DB(date):
 
     except Exception as error:
         logger.error(f"An error occurred while adding mailing date {date}: {error}")
+        if connection:
+            connection.rollback()
         
 
     finally:
@@ -165,6 +209,8 @@ def get_all_users_DB():
 
     except Exception as error:
         logger.error(f"An error occurred while fetching users: {error}")
+        if connection:
+            connection.rollback()
 
     finally:
         cursor.close()
@@ -191,6 +237,8 @@ def get_all_mailing_history_DB():
 
     except Exception as error:
         logger.error(f"An error occurred while fetching mailing history: {error}")
+        if connection:
+            connection.rollback()
 
     finally:
         cursor.close()
