@@ -58,7 +58,7 @@ async def ask_calendar_url(message: Message, state: FSMContext) -> None:
 
 # Handler for calendar URL input
 @dp.message(Form.asking_calendar_url)
-async def ask_cal(message: Message) -> None:
+async def ask_cal(message: Message, state: FSMContext) -> None:
     url = message.text
     logger.info(f"Received calendar URL from user {message.from_user.id}: {url}")
     try:
@@ -84,6 +84,7 @@ async def ask_cal(message: Message) -> None:
             "Stay organized and have an amazing day! ✨"))
         await message.reply(confirmation_msg)
         await message.reply(schedule_msg)
+        await state.clear()
         logger.info(f"Sent confirmation and sample schedule to user {message.from_user.id}.")
     except Exception as e:
         logger.error(f"Failed to process URL for user {message.from_user.id}: {e}")

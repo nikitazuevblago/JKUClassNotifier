@@ -57,48 +57,51 @@ class Schedule():
     def get_daily_schedule(self, url):
         calendar = self.url_to_calendar(url)
         today_events = self.get_today_events(self.current_date, calendar)
-        # Template for the header
-        header_template = (
-            "📅 Servus!\n"
-            "Here’s your schedule for {current_date}:\n\n"
-        )
-        
-        # Template for each event (subject/class)
-        event_template = (
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🎯 Subject: {course_title}\n"
-            "👨‍🏫 Instructor: {instructor}\n"
-            "🗓 Time: {start_time} – {end_time}\n"
-            "🏫 Room: {location}\n"
-        )
-        
-        # Start the message with the header
-        message = header_template.format(current_date=self.current_date)
-        
-        # Add each event to the message
-        for event in today_events:
-            # Extract details from ICS event
-            summary = event.name  # e.g. "KV Responsible AI / Martina Mara / (510101/2024W)"
-            parts = summary.split(" / ")
-            
-            if len(parts) >= 2:
-                course_title = parts[0].strip()
-                instructor = parts[1].strip()
-            else:
-                # If the format is different or incomplete
-                course_title = summary.strip()
-                instructor = "N/A"
-            
-            start_time = event.begin.format('HH:mm')
-            end_time = event.end.format('HH:mm')
-            location = event.location if event.location else "N/A"
-            
-            message += event_template.format(
-                course_title=course_title,
-                instructor=instructor,
-                start_time=start_time,
-                end_time=end_time,
-                location=location
+        if len(today_events) > 0:
+            # Template for the header
+            header_template = (
+                "📅 Servus!\n"
+                "Here’s your schedule for {current_date}:\n\n"
             )
-        
-        return message
+            
+            # Template for each event (subject/class)
+            event_template = (
+                "━━━━━━━━━━━━━━━━━━\n"
+                "🎯 Subject: {course_title}\n"
+                "👨‍🏫 Instructor: {instructor}\n"
+                "🗓 Time: {start_time} – {end_time}\n"
+                "🏫 Room: {location}\n"
+            )
+            
+            # Start the message with the header
+            message = header_template.format(current_date=self.current_date)
+            
+            # Add each event to the message
+            for event in today_events:
+                # Extract details from ICS event
+                summary = event.name  # e.g. "KV Responsible AI / Martina Mara / (510101/2024W)"
+                parts = summary.split(" / ")
+                
+                if len(parts) >= 2:
+                    course_title = parts[0].strip()
+                    instructor = parts[1].strip()
+                else:
+                    # If the format is different or incomplete
+                    course_title = summary.strip()
+                    instructor = "N/A"
+                
+                start_time = event.begin.format('HH:mm')
+                end_time = event.end.format('HH:mm')
+                location = event.location if event.location else "N/A"
+                
+                message += event_template.format(
+                    course_title=course_title,
+                    instructor=instructor,
+                    start_time=start_time,
+                    end_time=end_time,
+                    location=location
+                )
+            
+            return message
+        else:
+            return "No events scheduled for today. Enjoy your day! 🌟"
