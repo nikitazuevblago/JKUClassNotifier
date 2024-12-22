@@ -28,7 +28,7 @@ python bot.py
 * ics
 
 ## File structure
-bot.py - bot structure
-db_interaction.py - interaction with database
-custom_logging.py - configured logger
-schedule.py - generator of post with today's classes
+* bot.py - bot structure
+* db_interaction.py - interaction with database
+* custom_logging.py - configured logger
+* schedule.py - generator of post with today's classes
