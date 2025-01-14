@@ -1,8 +1,10 @@
 from datetime import datetime
+from datetime import timedelta
 import pytz
 import requests
 from ics import Calendar
 from dotenv import load_dotenv
+from custom_logging import *
 
 load_dotenv()
 
@@ -52,16 +54,39 @@ class Schedule():
         today_events = sorted(today_events, key=lambda event: event.begin)
         
         return today_events
+    
+    def get_tomorrow_events(self, current_date, calendar):
+        tomorrow_events = []
+
+        # Calculate tomorrow's date
+        tomorrow_date = current_date + timedelta(days=1)
+
+        for event in calendar.events:
+            calendar_date = event.begin.date()
+            if calendar_date == tomorrow_date:
+                tomorrow_events.append(event)
+
+        # Sorting events by time, from earliest
+        tomorrow_events = sorted(tomorrow_events, key=lambda event: event.begin)
+
+        return tomorrow_events
 
 
-    def get_daily_schedule(self, url):
+    def get_daily_schedule(self, url, tomorrow=True):
         calendar = self.url_to_calendar(url)
-        today_events = self.get_today_events(self.current_date, calendar)
-        if len(today_events) > 0:
+        logger.info("Retrieving tomorrow events")
+        if tomorrow:
+            events = self.get_tomorrow_events(self.current_date, calendar)
+            current_date = self.current_date + timedelta(days=1)
+        else:
+            events = self.get_today_events(self.current_date, calendar)
+            current_date = self.current_date
+        logger.info(f"Retrieved events: {events}")
+        if len(events) > 0:
             # Template for the header
             header_template = (
                 "📅 Servus!\n"
-                "Here’s your schedule for {current_date}:\n\n"
+                f"Here’s your schedule for {current_date}:\n\n"
             )
             
             # Template for each event (subject/class)
@@ -77,7 +102,7 @@ class Schedule():
             message = header_template.format(current_date=self.current_date)
             
             # Add each event to the message
-            for event in today_events:
+            for event in events:
                 # Extract details from ICS event
                 summary = event.name  # e.g. "KV Responsible AI / Martina Mara / (510101/2024W)"
                 parts = summary.split(" / ")
@@ -101,7 +126,11 @@ class Schedule():
                     end_time=end_time,
                     location=location
                 )
-            
+            logger.info(f"Returning message")
             return message
         else:
-            return "No events scheduled for today. Enjoy your day! 🌟"
+            logger.info(f"Returning message")
+            if tomorrow:
+                return "No events scheduled for tomorrow. Enjoy your day! 🌟"
+            else:
+                return "No events scheduled for today. Enjoy your day! 🌟"

@@ -36,6 +36,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand(command="start", description="Start the bot"),
         BotCommand(command="help", description="Show help information"),
         BotCommand(command="update_time", description="Update message display time"),
+        BotCommand(command="get_today_schedule", description="Get schedule not for tomorrow but today")
     ]
     await bot.set_my_commands(commands)
     logger.info("Bot commands have been set successfully.")
@@ -81,7 +82,7 @@ async def ask_cal(message: Message, state: FSMContext) -> None:
     logger.info(f"Received calendar URL from user {message.from_user.id}: {url}")
     try:
         schedule_msg = Schedule().get_daily_schedule(url)
-        registered_users = [user for user, _ in get_all_users_DB()]
+        registered_users = [user for user, _, _, _ in get_all_users_DB()]
 
         if message.from_user.id in registered_users:
             remove_user_DB(message.from_user.id)
@@ -94,7 +95,8 @@ async def ask_cal(message: Message, state: FSMContext) -> None:
             "🎉 Congratulations! You’ve been successfully added "
             "to the daily JKU schedule mailing list. "
             "Schedule will be sent to you every day at approximately <b>00:00.</b> "
-            "Below is provided an example based on today's schedule. "
+            #"Below is provided an example based on today's schedule. "
+            "Below is provided an example based on tomorrow's schedule. "
             "Stay organized and have an amazing day! ✨"))
         await message.reply(confirmation_msg)
         await message.reply(schedule_msg)
@@ -113,7 +115,6 @@ async def send_daily_schedule(bot):
 
         for telegram_id, url, display_hour, display_minutes in users:
             user_time = time(display_hour, display_minutes)
-            next_user_time = datetime.combine(current_time.date(), user_time)
 
             # Send immediately if the updated time is close to now
             if current_time.time() < user_time <= (current_time + timedelta(minutes=1)).time():
@@ -125,7 +126,16 @@ async def send_daily_schedule(bot):
                     logger.error(f"Failed to send message to {telegram_id}: {e}")
 
         # Sleep for a short duration (e.g., 30 seconds) before checking again
-        await asyncio.sleep(30)
+        await asyncio.sleep(35)
+
+
+@dp.message(Command("get_today_schedule"))
+async def get_today_schedule(message: Message) -> None:
+    logger.info(f"User {message.from_user.id} triggered /get_today_schedule command.")
+    userUrl = [row[1] for row in get_all_users_DB() if row[0]==message.from_user.id][0]
+    today_schedule_msg = Schedule().get_daily_schedule(userUrl, tomorrow=False)
+    logger.info(f"Sending daily schedule to {message.from_user.id}")
+    await message.reply(today_schedule_msg)
 
 
 
@@ -209,3 +219,12 @@ if __name__ == "__main__":
         logger.info("Test database setup completed.")
     logger.info("Starting bot...")
     asyncio.run(main())
+
+# Push to ghcr
+
+# docker build -t jkuclassnotifier .
+# docker tag jkuclassnotifier:latest ghcr.io/nikitazuevblago/jkuclassnotifier:latest
+# docker push ghcr.io/nikitazuevblago/jkuclassnotifier:latest
+
+# Pull and set up container
+
