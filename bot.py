@@ -25,12 +25,15 @@ dp = Dispatcher()
 
 class Form(StatesGroup):
     asking_calendar_url = State()
+    asking_display_time = State()
 
 
 # Bot commands setup
 async def set_bot_commands(bot: Bot):
     commands = [
-        BotCommand(command="start", description="Start the bot")
+        BotCommand(command="start", description="Start the bot"),
+        BotCommand(command="help", description="Show help information"),
+        BotCommand(command="update_time", description="Update message display time"),
     ]
     await bot.set_my_commands(commands)
     logger.info("Bot commands have been set successfully.")
@@ -91,8 +94,7 @@ async def ask_cal(message: Message, state: FSMContext) -> None:
         await message.reply("⚠️ An error occurred while processing your calendar URL. Please try again.")
 
 
-# Background task to send daily schedule
-async def send_daily_schedule(bot):    
+async def send_daily_schedule(bot):
     logger.info("Daily schedule background task started.")
     try:
         # Get last mailing date
@@ -111,7 +113,7 @@ async def send_daily_schedule(bot):
             users = get_all_users_DB()
             logger.info(f"Retrieved {len(users)} users for mailing.")
 
-            for telegram_id, url in users:
+            for telegram_id, url, display_hour, display_minutes in users:
                 try:
                     schedule_msg = Schedule().get_daily_schedule(url)
                     await bot.send_message(telegram_id, schedule_msg)
@@ -124,12 +126,50 @@ async def send_daily_schedule(bot):
             add_mailing_date_DB(last_mailing_date)
             logger.info(f"Updated mailing date to {last_mailing_date}.")
 
-        # Sleep until next midnight
-        next_midnight = datetime.combine(updated_current_date + timedelta(days=1), time(0, 0))
+        # Sleep until the next user-specified time
         current_time = get_current_date(time=True).replace(tzinfo=None)
-        sleep_time = (next_midnight - current_time).total_seconds()
-        logger.info(f"Sleeping for {sleep_time / 60:.2f} minutes until next midnight.")
+        next_user_time = datetime.combine(updated_current_date, time(display_hour, display_minutes))
+
+        # If the current time has already passed the user-specified time, set it for the next day
+        if current_time >= next_user_time:
+            next_user_time = datetime.combine(updated_current_date + timedelta(days=1), time(display_hour, display_minutes))
+
+        sleep_time = (next_user_time - current_time).total_seconds()
+        logger.info(f"Sleeping for {sleep_time / 60:.2f} minutes until user-specified time: {next_user_time.time()}.")
         await asyncio.sleep(sleep_time)
+
+
+@dp.message(Command("update_time"))
+async def ask_display_time(message: Message, state: FSMContext) -> None:
+    logger.info(f"User {message.from_user.id} triggered /update_time command.")
+    msg = textwrap.dedent("""\
+    Please enter the new display time in the format <b>HH:MM</b> (e.g., 08:30 for 8:30 AM):
+    """)
+    await message.reply(msg)
+    await state.set_state(Form.asking_display_time)
+
+
+@dp.message(Form.asking_display_time)
+async def update_display_time_handler(message: Message, state: FSMContext) -> None:
+    time_input = message.text.strip()
+    try:
+        # Validate time format
+        display_time = datetime.strptime(time_input, "%H:%M").time()
+        display_hour = display_time.hour
+        display_minutes = display_time.minute
+
+        # Update the display time in the database
+        update_display_time(message.from_user.id, display_hour, display_minutes)
+        logger.info(f"Display time for user {message.from_user.id} updated to {display_hour:02d}:{display_minutes:02d}.")
+        
+        # Send confirmation
+        await message.reply(f"✅ Your message display time has been updated to <b>{display_hour:02d}:{display_minutes:02d}</b>.")
+        await state.clear()
+
+    except ValueError:
+        # Handle invalid time format
+        logger.warning(f"Invalid time format received from user {message.from_user.id}: {time_input}")
+        await message.reply("⚠️ Invalid time format. Please enter the time in <b>HH:MM</b> format (e.g., 08:30).")
 
 
 # Main function
@@ -139,6 +179,38 @@ async def main() -> None:
     asyncio.create_task(send_daily_schedule(bot))  
     logger.info("Bot polling started.")
     await dp.start_polling(bot)
+
+
+
+
+# Add this new handler
+@dp.message(Command("help"))
+async def show_help(message: Message) -> None:
+    logger.info(f"User {message.from_user.id} requested help.")
+    help_text = textwrap.dedent(f"""\
+    🤖 <b>JKU Schedule Bot Help</b>
+
+    Available commands:
+    /start - Start the bot and set up your calendar
+    /help - Show this help message
+
+    📅 <b>How to use:</b>
+    1. Get your calendar URL from KUSSS
+    2. Send it to the bot
+    3. Receive daily schedule updates at midnight
+
+    🔗 <b>Getting your calendar URL:</b>
+    1. Go to KUSSS
+    2. Navigate to Studyroom > Export Appointments
+    3. Copy the calendar subscription URL
+
+    ⚠️ <b>Note:</b> If you need to update your calendar URL, just use /start again.
+
+    Need more help? Contact @YourUsername
+    """)
+    
+    await message.reply(help_text)
+    logger.info(f"Sent help information to user {message.from_user.id}.")
 
 if __name__ == "__main__":
     is_test = int(os.getenv("IS_TEST"))
