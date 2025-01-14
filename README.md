@@ -10,7 +10,7 @@ Check it out in telegram - @JKUClassNotifierBOT
 ### docker commands to host yourself:
 ```bash
 docker pull ghcr.io/nikitazuevblago/jkuclassnotifier:latest
-docker run -d --name jkuclassnotifier --restart=always -e TZ="CET" ghcr.io/jkuclassnotifier/jkuclassnotifier
+docker run -d --name jkuclassnotifier --restart=always -e TZ="CET" ghcr.io/nikitazuevblago/jkuclassnotifier
 ```
 
 ## Installation and Setup 
